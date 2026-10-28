@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TERMINAL // EMIX</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #020703;
+            color: #00ff41;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .crt-scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.4) 50%);
+            background-size: 100% 4px;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .terminal-card {
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 25px rgba(0, 255, 65, 0.45), inset 0 0 15px rgba(0, 255, 65, 0.12);
+            background: rgba(2, 10, 4, 0.94);
+            width: 100%;
+            max-width: 410px;
+            padding: 24px 20px;
+            text-align: center;
+            position: relative;
+            z-index: 3;
+            border-radius: 2px;
+        }
+
+        .divider {
+            border: none;
+            border-top: 1px solid rgba(0, 255, 65, 0.4);
+            margin: 18px 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            direction: ltr;
+        }
+
+        .dots {
+            color: #ff3333;
+            letter-spacing: 4px;
+        }
+
+        .glow-title {
+            font-family: 'Share Tech Mono', 'Cairo', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            color: #55ff88;
+            text-shadow: 0 0 8px #00ff41, 0 0 20px #00ff41;
+            letter-spacing: 2px;
+            margin: 15px 0 10px 0;
+        }
+
+        .sub-code {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: rgba(0, 255, 65, 0.85);
+            margin-bottom: 25px;
+            direction: ltr;
+        }
+
+        .instruction {
+            font-family: 'Cairo', sans-serif;
+            font-size: 15px;
+            margin-bottom: 18px;
+            color: #99ffaa;
+        }
+
+        .terminal-input {
+            width: 100%;
+            background: rgba(0, 20, 5, 0.7);
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            padding: 14px;
+            font-family: 'Share Tech Mono', sans-serif;
+            font-size: 24px;
+            text-align: center;
+            letter-spacing: 7px;
+            outline: none;
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.35);
+            margin-bottom: 20px;
+            transition: 0.3s;
+        }
+
+        .terminal-input:focus {
+            box-shadow: 0 0 18px rgba(0, 255, 65, 0.7);
+        }
+
+        .terminal-btn {
+            width: 100%;
+            background-color: #00ff41;
+            color: #020703;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 17px;
+            font-weight: bold;
+            padding: 14px;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 2px;
+            box-shadow: 0 0 16px rgba(0, 255, 65, 0.5);
+            transition: 0.2s all;
+        }
+
+        .terminal-btn:hover {
+            background-color: #33ff66;
+            box-shadow: 0 0 28px rgba(0, 255, 65, 0.9);
+        }
+
+        .status-msg {
+            font-size: 12px;
+            margin: 25px 0 15px 0;
+            letter-spacing: 1px;
+            min-height: 18px;
+            direction: ltr;
+        }
+
+        .error-shake {
+            color: #ff3344 !important;
+            animation: shake 0.3s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        /* شاشة التحميل المطابقة تماماً */
+        #loadingScreen {
+            display: none;
+            padding: 10px 0;
+        }
+
+        .access-check-title {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 28px;
+            font-weight: bold;
+            letter-spacing: 3px;
+            color: #55ff88;
+            text-shadow: 0 0 8px #00ff41, 0 0 20px #00ff41;
+            margin-top: 15px;
+        }
+
+        .logging-in-text {
+            font-family: 'Cairo', sans-serif;
+            font-size: 19px;
+            color: #aaffbb;
+            margin: 20px 0 28px 0;
+        }
+
+        .progress-border {
+            width: 100%;
+            height: 32px;
+            border: 2px solid #00ff41;
+            padding: 3px;
+            box-shadow: 0 0 16px rgba(0, 255, 65, 0.45);
+            background: rgba(0, 20, 5, 0.85);
+            margin-bottom: 16px;
+        }
+
+        .progress-inner-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #00ff41;
+            box-shadow: 0 0 16px #00ff41;
+            transition: width 0.04s linear;
+        }
+
+        .progress-pct-number {
+            font-size: 15px;
+            letter-spacing: 1.5px;
+            color: #00ff41;
+            margin-bottom: 24px;
+            direction: ltr;
+        }
+
+        .verifying-text {
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            color: rgba(0, 255, 65, 0.9);
+            direction: ltr;
+            margin-bottom: 10px;
+        }
+
+        /* شاشة الصورة */
+        #resultScreen {
+            display: none;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .photo-frame {
+            position: relative;
+            margin: 18px auto;
+            border: 2px solid #00ff41;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.5), inset 0 0 15px rgba(0, 255, 65, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            max-width: 280px;
+            background: #000;
+        }
+
+        .user-photo {
+            width: 100%;
+            height: auto;
+            display: block;
+            filter: contrast(1.05) brightness(1.02);
+        }
+
+        .footer {
+            font-size: 10px;
+            letter-spacing: 1px;
+            color: rgba(0, 255, 65, 0.7);
+            direction: ltr;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="crt-scanlines"></div>
+    <canvas id="matrixCanvas"></canvas>
+
+    <div class="terminal-card">
+
+        <div class="header">
+            <div><span class="dots">• • •</span> TERMINAL SESSION</div>
+            <div>ENCRYPTED // 07</div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 1. شاشة تسجيل الدخول -->
+        <div id="loginScreen">
+            <h1 class="glow-title" style="font-family: 'Cairo', sans-serif;">منظومة ايمكس</h1>
+            <div class="sub-code">EMIX // SECURE ACCESS TERMINAL</div>
+
+            <div class="instruction">[ أدخل كلمة السر للمتابعة ]</div>
+
+            <input type="password" id="passInput" class="terminal-input" placeholder="••••••••">
+
+            <button class="terminal-btn" onclick="checkAuth()">[ AUTHENTICATE ]</button>
+
+            <div class="status-msg" id="statusBox">SYSTEM STATUS: READY</div>
+        </div>
+
+        <!-- 2. شاشة التحميل ACCESS CHECK -->
+        <div id="loadingScreen">
+            <div class="access-check-title">ACCESS CHECK</div>
+            <div class="logging-in-text">جارٍ تسجيل الدخول . . .</div>
+
+            <div class="progress-border">
+                <div class="progress-inner-bar" id="progressBar"></div>
+            </div>
+
+            <div class="progress-pct-number" id="progressText">0%</div>
+
+            <div class="verifying-text">
+                VERIFYING CREDENTIALS // PLEASE WAIT
+            </div>
+        </div>
+
+        <!-- 3. شاشة إظهار صورتك -->
+        <div id="resultScreen">
+            <div style="font-size: 12px; letter-spacing: 1px; margin-bottom: 6px; direction: ltr;">[ IDENTITY VERIFIED ]</div>
+            <div style="font-size: 11px; color: #55ff77; direction: ltr; margin-bottom: 12px;">TARGET_LOCATED.png</div>
+
+            <div class="photo-frame">
+                <img src="IMG-20261025-WA0482.jpg" alt="Target" class="user-photo">
+            </div>
+
+            <div style="font-family: 'Cairo', sans-serif; font-size: 17px; font-weight: bold; color: #55ff88; margin-top: 10px;">
+                تم تحديد الهوية بنجاح ✓
+            </div>
+            <div style="font-size: 10px; opacity: 0.7; margin-top: 5px; direction: ltr;">ACCESS FULLY GRANTED</div>
+        </div>
+
+        <hr class="divider">
+
+        <div class="footer">
+            EMIX // ALL SYSTEMS NOMINAL صنع بواسطة
+        </div>
+
+    </div>
+
+    <script>
+        function checkAuth() {
+            const input = document.getElementById("passInput").value.trim().toLowerCase();
+            const statusBox = document.getElementById("statusBox");
+
+            if (input === "ايمكس" || input === "emix") {
+                statusBox.textContent = "SYSTEM STATUS: ACCESS GRANTED";
+                statusBox.style.color = "#00ff41";
+                
+                setTimeout(() => {
+                    document.getElementById("loginScreen").style.display = "none";
+                    document.getElementById("loadingScreen").style.display = "block";
+                    startProgressBar();
+                }, 350);
+            } else {
+                statusBox.textContent = "SYSTEM STATUS: ACCESS DENIED!";
+                statusBox.classList.add("error-shake");
+                setTimeout(() => statusBox.classList.remove("error-shake"), 500);
+            }
+        }
+
+        function startProgressBar() {
+            const bar = document.getElementById("progressBar");
+            const text = document.getElementById("progressText");
+            let progress = 0;
+
+            const timer = setInterval(() => {
+                progress++;
+                bar.style.width = progress + "%";
+                text.textContent = progress + "%";
+
+                if (progress >= 100) {
+                    clearInterval(timer);
+                    setTimeout(() => {
+                        document.getElementById("loadingScreen").style.display = "none";
+                        document.getElementById("resultScreen").style.display = "block";
+                    }, 400);
+                }
+            }, 30);
+        }
+
+        document.getElementById("passInput").addEventListener("keyup", function(e) {
+            if (e.key === "Enter") checkAuth();
+        });
+
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const letters = '0123456789ABCDEFアイウエオカキクケコサシスセソタチツテト';
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(2, 7, 3, 0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff41';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = letters[Math.floor(Math.random() * letters.length)];
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 40);
+    </script>
+</body>
+</html>
